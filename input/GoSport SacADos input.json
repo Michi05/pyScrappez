@@ -1,0 +1,28 @@
+{
+  	"output_filename": "webProducts.lst.csv",
+
+
+	"url_mode": "QUERY_DRIVEN",
+
+	"url_base": "http://www.go-sport.com/sport/randonne/sacs-dos/l-7301401-1.html",
+	"url_next_page": ["a.PaginationButtonStd003a", "href"],
+
+	"url_stepper": {
+	  	"sufix": "http://www.go-sport.com/sport/randonne/sacs-dos/l-7301401-",
+		"func": "sufix + index + '.html'",
+		"min": 1,
+		"max": 4
+	},
+
+  
+	"base_jQuery": "div.plProductView",
+	"base_node": "div.plProductView",
+	"mapping_jQuery": {
+		"title": "a.plPrName span.bold",
+		"description": "a.plPrName",
+		"image_url": "img.href",
+		"price": "div.priceContainer",
+		"product_url": ["a.plPrName", "href"]
+	}
+  
+}
