@@ -18,9 +18,6 @@ import os.path as path  # For checking the existence of the files
 #
 #######################################################
 
-## TODO for prices: finalPrice = price0[1]=="m"?+price0[0]:4.357*price0[0]
-## price.textContent.replace("£", "").split("p")
-
 DEBUG_MODE = True
 
 def connect2Web_main(cfgFileName = "pyTest input.json"):
@@ -77,8 +74,12 @@ def connect2Web(fileName, urls, cfg):
 
     outFile = open(fileName, 'a')  # I use append bc the above could fail during dev
     query_map = cfg["jQuery_mapping"]
-    sorted_field_queries = [query_map[fieldname] for fieldname in query_map]
-    outFile.write(arrayToCSV([fieldname for fieldname in query_map]).encode('ascii', 'ignore'))
+    # query_map is an array of tuples with
+    # 0 == field name,          1 == query
+    # 2 == attribute or ""      3 == transformation/action
+    sorted_field_queries = [(tuple[1], tuple[2]) for tuple in query_map]
+    # Print header with field names
+    outFile.write(arrayToCSV([tuple[0] for tuple in query_map]).encode('ascii', 'ignore'))
     next_url = cfg["url_base"]
     while urls.incIndex(next_url):
         debMsg("Processing page: " + urls.getURL())
@@ -87,7 +88,7 @@ def connect2Web(fileName, urls, cfg):
         query_next, attrib = cfg["url_jQuery_next_page"]
         next_url = "https://www.gumtree.com" + readElement(myPQ, query_next, attrib)
         for node in myPQ(cfg["jQuery_base"]).items():
-            fieldValues = [readElement(node, query, attrib) for query, attrib in sorted_field_queries]
+            fieldValues = [transf_func(readElement(node, query, attrib)) for f_name, query, attrib, transf_func in query_map]
             outFile.write(arrayToCSV(fieldValues).encode('ascii', 'ignore'))
         print "Page written to file."
     outFile.close()
@@ -101,30 +102,21 @@ def loadConfiguration(cfgFileName):
     :return: data structure with the configuration
     """
     try:
-        with open(cfgFileName) as json_cfg:
-            cfg = json.load(json_cfg)
-            return cfg
+        if not path.isfile(cfgFileName):
+            print("Unable to read configuration from file: " + str(cfgFileName))
+            return None
+        theConfig = {}
+        execfile(cfgFileName, globals(), theConfig)
+        return theConfig
     except Exception as e:
-        print("ERROR <<" + str(e.message) + ">> while trying to read configuration from file: " + str(cfgFileName))
+        print("ERROR <<" + str(e.msg) + ">> while trying to read configuration from file: " + str(cfgFileName))
         return None
 
-def arrayToDictionary(rowList):
-  resultStr = ''
-  for row in rowList:
-    resultStr += row["name"].strip()
-    resultStr += ";" + row["Date sortie :"].strip()
-    resultStr += ";" + row["Genre :"].strip()
-    resultStr += ";" + row["Langue :"].strip()
-    resultStr += ";" + row["Dureé :"].strip()
-    resultStr += ";" + row["url"].strip()
-    resultStr += "\r\n"
-  return resultStr
-
-def arrayToCSV(dataInList, separator=";"):
+def arrayToCSV(dataInList, separator=","):
     resultStr = ''
     for value in dataInList:
-        resultStr += "\"" + value + "\"" + separator
-    return resultStr[0:-1] + "\r\n"
+        resultStr += "\"" + unicode(value).encode("ascii", "xmlcharrefreplace") + "\"" + separator
+    return resultStr[0:-1] + "\n"
 
 def getWebHTML(currentPage):
     try:
